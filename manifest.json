@@ -1,0 +1,13 @@
+{
+  "background_color": "#ffffff",
+  "dir": "ltr",
+  "display": "standalone",
+  "name": "asaroan-ship-it.github",
+  "orientation": "any",
+  "scope": "/",
+  "short_name": "asaroan-ship-it.github",
+  "start_url": "/",
+  "theme_color": "#ffffff",
+  "description": "finance app",
+  "id": "Finance App"
+}
