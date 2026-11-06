@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestione Finanze Personali</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-blue-600 text-white shadow-md py-4 px-6 flex justify-between items-center">
+        <h1 class="text-xl font-bold">Gestione Finanze</h1>
+        <button onclick="openCategoryModal()" class="bg-blue-700 hover:bg-blue-800 text-sm px-3 py-1.5 rounded-lg font-medium transition">
+            Gestisci Categorie
+        </button>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-grow max-w-4xl w-full mx-auto p-4 sm:p-6 space-y-6">
+
+        <!-- Summary Cards -->
+        <section class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                <p class="text-sm text-gray-500 font-medium">Entrate del Mese</p>
+                <p id="totalIncome" class="text-2xl font-bold text-green-600 mt-1">€ 0,00</p>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                <p class="text-sm text-gray-500 font-medium">Uscite del Mese</p>
+                <p id="totalExpense" class="text-2xl font-bold text-red-600 mt-1">€ 0,00</p>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                <p class="text-sm text-gray-500 font-medium">Bilancio Mensile</p>
+                <p id="netBalance" class="text-2xl font-bold text-blue-600 mt-1">€ 0,00</p>
+            </div>
+        </section>
+
+        <!-- Form Section -->
+        <section class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+            <h2 class="text-lg font-semibold mb-4 text-gray-700">Aggiungi Movimento</h2>
+            <form id="transactionForm" onsubmit="addTransaction(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Tipo</label>
+                    <select id="type" onchange="updateCategoryOptions()" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        <option value="expense">Uscita</option>
+                        <option value="income">Entrata</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Data</label>
+                    <input type="date" id="date" required class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Categoria</label>
+                    <select id="category" required class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        <!-- Popolato dinamicamente -->
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Importo (€)</label>
+                    <input type="number" step="0.01" id="amount" placeholder="0.00" required class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <div class="flex items-end">
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium p-2 rounded-lg text-sm transition">
+                        Aggiungi
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <!-- Month Filter & Overview Section -->
+        <section class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 space-y-4">
+            <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
+                <h2 class="text-lg font-semibold text-gray-700">Riepilogo per Categoria</h2>
+                <div class="flex items-center space-x-2">
+                    <label for="monthFilter" class="text-sm font-medium text-gray-600">Mese:</label>
+                    <input type="month" id="monthFilter" onchange="render()" class="border border-gray-300 rounded-lg p-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+            </div>
+
+            <!-- Chart & Summary List -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                <div class="w-full h-64 flex justify-center">
+                    <canvas id="expenseChart"></canvas>
+                </div>
+                <div id="categorySummary" class="space-y-2 max-h-64 overflow-y-auto pr-2">
+                    <!-- Popolato dinamicamente -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Transactions History -->
+        <section class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+            <h2 class="text-lg font-semibold mb-4 text-gray-700">Storico Movimenti</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="border-b border-gray-200 text-gray-500">
+                            <th class="py-2 px-3">Data</th>
+                            <th class="py-2 px-3">Tipo</th>
+                            <th class="py-2 px-3">Categoria</th>
+                            <th class="py-2 px-3 text-right">Importo</th>
+                            <th class="py-2 px-3 text-center">Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transactionTableBody">
+                        <!-- Popolato dinamicamente -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Modal Gestione Categorie -->
+    <div id="categoryModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex justify-center items-center p-4 z-50">
+        <div class="bg-white rounded-xl max-w-md w-full p-6 space-y-4 shadow-lg">
+            <div class="flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-gray-800">Gestisci Categorie</h3>
+                <button onclick="closeCategoryModal()" class="text-gray-400 hover:text-gray-600 font-bold text-xl">&times;</button>
+            </div>
+            
+            <form onsubmit="addCategory(event)" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Nome Categoria</label>
+                    <input type="text" id="newCatName" placeholder="Es. Palestra, Abbonamenti..." required class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Tipo</label>
+                    <select id="newCatType" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        <option value="expense">Uscita</option>
+                        <option value="income">Entrata</option>
+                    </select>
+                </div>
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium p-2 rounded-lg text-sm transition">
+                    Aggiungi Categoria
+                </button>
+            </form>
+
+            <div class="border-t pt-4">
+                <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Categorie Esistenti</h4>
+                <div id="customCategoryList" class="space-y-2 max-h-40 overflow-y-auto pr-1">
+                    <!-- Popolato dinamicamente -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // Dati iniziali predefiniti
+        const defaultCategories = {
+            expense: ['Alimentari', 'Casa', 'Trasporti', 'Svago', 'Bollette', 'Altro'],
+            income: ['Stipendio', 'Freelance', 'Investimenti', 'Altro']
+        };
+
+        let categories = JSON.parse(localStorage.getItem('finances_categories')) || defaultCategories;
+        let transactions = JSON.parse(localStorage.getItem('finances_transactions')) || [];
+        let chartInstance = null;
+
+        // Imposta la data odierna e il mese corrente all'avvio
+        document.getElementById('date').valueAsDate = new Date();
+        const currentMonthStr = new Date().toISOString().slice(0, 7);
+        document.getElementById('monthFilter').value = currentMonthStr;
+
+        updateCategoryOptions();
+        render();
+
+        function updateCategoryOptions() {
+            const type = document.getElementById('type').value;
+            const categorySelect = document.getElementById('category');
+            categorySelect.innerHTML = '';
+            
+            const cats = categories[type] || [];
+            cats.forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat;
+                opt.textContent = cat;
+                categorySelect.appendChild(opt);
+            });
+        }
+
+        function addTransaction(e) {
+            e.preventDefault();
+            const type = document.getElementById('type').value;
+            const date = document.getElementById('date').value;
+            const category = document.getElementById('category').value;
+            const amount = parseFloat(document.getElementById('amount').value);
+
+            const newTx = {
+                id: Date.now(),
+                type,
+                date,
+                category,
+                amount
+            };
+
+            transactions.push(newTx);
+            saveAndRender();
+            document.getElementById('amount').value = '';
+        }
+
+        function deleteTransaction(id) {
+            transactions = transactions.filter(tx => tx.id !== id);
+            saveAndRender();
+        }
+
+        function saveAndRender() {
+            localStorage.setItem('finances_transactions', JSON.stringify(transactions));
+            localStorage.setItem('finances_categories', JSON.stringify(categories));
+            render();
+        }
+
+        function render() {
+            const selectedMonth = document.getElementById('monthFilter').value;
+            
+            // Filtra movimenti per il mese selezionato
+            const filteredTxs = transactions.filter(tx => tx.date.startsWith(selectedMonth));
+            
+            // Calcoli totali mese
+            let totalIncome = 0;
+            let totalExpense = 0;
+            const expenseByCategory = {};
+
+            filteredTxs.forEach(tx => {
+                if(tx.type === 'income') {
+                    totalIncome += tx.amount;
+                } else {
+                    totalExpense += tx.amount;
+                    expenseByCategory[tx.category] = (expenseByCategory[tx.category] || 0) + tx.amount;
+                }
+            });
+
+            const net = totalIncome - totalExpense;
+
+            document.getElementById('totalIncome').textContent = `€ ${totalIncome.toFixed(2)}`;
+            document.getElementById('totalExpense').textContent = `€ ${totalExpense.toFixed(2)}`;
+            const netEl = document.getElementById('netBalance');
+            netEl.textContent = `€ ${net.toFixed(2)}`;
+            netEl.className = `text-2xl font-bold mt-1 ${net >= 0 ? 'text-green-600' : 'text-red-600'}`;
+
+            // Render Tabella Storico (ordinata per data decrescente)
+            const tbody = document.getElementById('transactionTableBody');
+            tbody.innerHTML = '';
+            
+            const sortedTxs = [...filteredTxs].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            if(sortedTxs.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-gray-400">Nessun movimento in questo mese.</td></tr>`;
+            } else {
+                sortedTxs.forEach(tx => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'border-b border-gray-100 hover:bg-gray-50';
+                    tr.innerHTML = `
+                        <td class="py-2.5 px-3 text-gray-600">${tx.date}</td>
+                        <td class="py-2.5 px-3"><span class="px-2 py-1 rounded text-xs font-semibold ${tx.type === 'income' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">${tx.type === 'income' ? 'Entrata' : 'Uscita'}</span></td>
+                        <td class="py-2.5 px-3 text-gray-800">${tx.category}</td>
+                        <td class="py-2.5 px-3 text-right font-medium ${tx.type === 'income' ? 'text-green-600' : 'text-red-600'}">${tx.type === 'income' ? '+' : '-'}€ ${tx.amount.toFixed(2)}</td>
+                        <td class="py-2.5 px-3 text-center">
+                            <button onclick="deleteTransaction(${tx.id})" class="text-red-500 hover:text-red-700 font-bold text-sm">Elimina</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+
+            // Render Riepilogo Categorie Uscite
+            const summaryContainer = document.getElementById('categorySummary');
+            summaryContainer.innerHTML = '';
+
+            const catKeys = Object.keys(expenseByCategory);
+            if(catKeys.length === 0) {
+                summaryContainer.innerHTML = `<p class="text-sm text-gray-400 text-center py-6">Nessuna uscita registrata questo mese.</p>`;
+            } else {
+                catKeys.forEach(cat => {
+                    const amount = expenseByCategory[cat];
+                    const percentage = totalExpense > 0 ? ((amount / totalExpense) * 100).toFixed(1) : 0;
+                    
+                    const div = document.createElement('div');
+                    div.className = 'bg-gray-50 p-2.5 rounded-lg border border-gray-100 flex justify-between items-center text-sm';
+                    div.innerHTML = `
+                        <div>
+                            <span class="font-medium text-gray-700">${cat}</span>
+                            <span class="text-xs text-gray-400 ml-2">(${percentage}%)</span>
+                        </div>
+                        <span class="font-bold text-red-600">€ ${amount.toFixed(2)}</span>
+                    `;
+                    summaryContainer.appendChild(div);
+                });
+            }
+
+            renderChart(expenseByCategory);
+        }
+
+        function renderChart(expenseByCategory) {
+            const ctx = document.getElementById('expenseChart').getContext('2d');
+            const labels = Object.keys(expenseByCategory);
+            const data = Object.values(expenseByCategory);
+
+            if(chartInstance) {
+                chartInstance.destroy();
+            }
+
+            if(labels.length === 0) {
+                // Grafico vuoto se non ci dati
+                chartInstance = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Nessun dato'],
+                        datasets: [{ data: [1], backgroundColor: ['#e5e7eb'] }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+                });
+                return;
+            }
+
+            chartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: [
+                            '#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#6366f1'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { boxWidth: 12, font: { size: 11 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Gestione Modale Categorie
+        function openCategoryModal() {
+            document.getElementById('categoryModal').classList.remove('hidden');
+            renderCustomCategoryList();
+        }
+
+        function closeCategoryModal() {
+            document.getElementById('categoryModal').classList.add('hidden');
+            updateCategoryOptions();
+        }
+
+        function addCategory(e) {
+            e.preventDefault();
+            const name = document.getElementById('newCatName').value.trim();
+            const type = document.getElementById('newCatType').value;
+
+            if(name && !categories[type].includes(name)) {
+                categories[type].push(name);
+                document.getElementById('newCatName').value = '';
+                saveAndRender();
+                renderCustomCategoryList();
+            }
+        }
+
+        function deleteCategory(type, catName) {
+            // Evita di cancellare se è l'ultima categoria rimasta
+            if(categories[type].length <= 1) {
+                alert("Devi mantenere almeno una categoria per tipo.");
+                return;
+            }
+            categories[type] = categories[type].filter(c => c !== catName);
+            saveAndRender();
+            renderCustomCategoryList();
+        }
+
+        function renderCustomCategoryList() {
+            const listContainer = document.getElementById('customCategoryList');
+            listContainer.innerHTML = '';
+
+            ['expense', 'income'].forEach(type => {
+                const label = type === 'expense' ? 'Uscite' : 'Entrate';
+                categories[type].forEach(cat => {
+                    const item = document.createElement('div');
+                    item.className = 'flex justify-between items-center bg-gray-50 p-2 rounded border border-gray-100 text-sm';
+                    item.innerHTML = `
+                        <span>${cat} <span class="text-xs text-gray-400">(${label})</span></span>
+                        <button onclick="deleteCategory('${type}', '${cat}')" class="text-red-500 hover:text-red-700 text-xs font-bold">Elimina</button>
+                    `;
+                    listContainer.appendChild(item);
+                });
+            });
+        }
+    </script>
+</body>
+</html>
